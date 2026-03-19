@@ -1,0 +1,6 @@
+# MonkeysLegion Notifications Config Profile
+
+default = "database" # mail | database
+
+[channels]
+channels.database.table = "notifications"
