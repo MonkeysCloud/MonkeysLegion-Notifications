@@ -6,6 +6,7 @@ use MonkeysLegion\Mail\Mailer;
 use MonkeysLegion\Notifications\Contracts\NotifiableInterface;
 use MonkeysLegion\Notifications\Contracts\NotificationInterface;
 use MonkeysLegion\Notifications\Messages\MailMessage;
+use MonkeysLegion\Template\Renderer;
 
 class MailChannel implements ChannelInterface
 {
@@ -13,7 +14,8 @@ class MailChannel implements ChannelInterface
      * Create a new mail channel instance.
      */
     public function __construct(
-        protected Mailer $mailer
+        protected Mailer $mailer,
+        private Renderer $renderer
     ) {
     }
 
@@ -25,8 +27,13 @@ class MailChannel implements ChannelInterface
         $message = $notification->toMail($notifiable);
 
         if ($message instanceof MailMessage) {
+            $recipient = $notifiable->routeNotificationFor('mail');
+            if (!is_string($recipient)) {
+                return;
+            }
+
             $this->mailer->send(
-                $notifiable->routeNotificationFor('mail'),
+                $recipient,
                 $message->subject,
                 $this->render($message),
                 'text/html',
@@ -36,8 +43,18 @@ class MailChannel implements ChannelInterface
         }
 
         // If it's already a configured Mailable or something that can be sent directly
-        if (method_exists($message, 'send')) {
-            $message->setTo($notifiable->routeNotificationFor('mail'))->send();
+        if (!is_object($message)) {
+            return;
+        }
+
+        if (method_exists($message, 'send') && method_exists($message, 'setTo')) {
+            $recipient = $notifiable->routeNotificationFor('mail');
+            if (!is_string($recipient)) {
+                return;
+            }
+
+            $message->setTo($recipient);
+            $message->send();
             return;
         }
     }
@@ -50,9 +67,12 @@ class MailChannel implements ChannelInterface
     protected function render(MailMessage $message): string
     {
         if ($message->view) {
-            // For now, we assume the Mailer or a View engine handles this.
-            // In a real scenario, we'd use the Template package here.
-            return ""; 
+            $data = $message->toArray()['viewData'];
+
+            return $this->renderer->render(
+                $message->view,
+                $data
+            );
         }
 
         $html = "<h1>{$message->subject}</h1>";

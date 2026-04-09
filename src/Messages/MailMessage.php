@@ -6,13 +6,17 @@ class MailMessage
 {
     public string $level = 'info';
     public string $subject;
+    /** @var list<string> */
     public array $introLines = [];
+    /** @var list<string> */
     public array $outroLines = [];
     public ?string $actionText = null;
     public ?string $actionUrl = null;
     public ?string $view = null;
+    /** @var array<string, mixed> */
     public array $viewData = [];
 
+    /** @var list<array{path: string, options: array<string, mixed>}> */
     public array $attachments = [];
 
     /**
@@ -63,15 +67,22 @@ class MailMessage
 
     /**
      * Attach a file to the notification.
+     *
+     * @param array<string, mixed> $options
      */
     public function attach(string $path, array $options = []): self
     {
-        $this->attachments[] = compact('path', 'options');
+        $this->attachments[] = [
+            'path' => $path,
+            'options' => $options,
+        ];
         return $this;
     }
 
     /**
      * Set the view to be used for the notification.
+     *
+     * @param array<string, mixed> $data
      */
     public function view(string $view, array $data = []): self
     {
@@ -82,6 +93,18 @@ class MailMessage
 
     /**
      * Get the data array for the notification.
+     *
+     * @return array{
+     *   level: string,
+     *   subject: string|null,
+     *   introLines: list<string>,
+     *   outroLines: list<string>,
+     *   actionText: string|null,
+     *   actionUrl: string|null,
+     *   view: string|null,
+     *   viewData: array<string, mixed>,
+     *   attachments: list<array{path: string, options: array<string, mixed>}>
+     * }
      */
     public function toArray(): array
     {

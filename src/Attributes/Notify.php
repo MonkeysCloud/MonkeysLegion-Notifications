@@ -4,13 +4,11 @@ namespace MonkeysLegion\Notifications\Attributes;
 
 use Attribute;
 
-#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
 class Notify
 {
     public function __construct(
-        public readonly string $notification,
-        public readonly array $channels = [],
-        public readonly bool $silent = false
+        public readonly string $notification
     ) {
     }
 }

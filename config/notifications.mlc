@@ -1,6 +1,4 @@
-# MonkeysLegion Notifications Config Profile
-
-default = "database" # mail | database
-
-[channels]
-channels.database.table = "notifications"
+# MonkeysLegion Notifications configuration.
+#
+# Controls the notifications table name used when publishing migrations.
+table = "notifications"

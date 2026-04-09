@@ -10,19 +10,30 @@
   "minimum-stability": "dev",
   "require-dev": {
     "phpunit/phpunit": "^13.1@dev",
-    "phpstan/phpstan": "2.2.x-dev"
+    "phpstan/phpstan": "2.2.x-dev",
+    "monkeyscloud/monkeyslegion-mlc": "^3.1",
+    "friendsofphp/php-cs-fixer": "^3.94"
   },
   "require": {
-    "psr/event-dispatcher": "^1.0@dev",
-    "monkeyscloud/monkeyslegion-query": "^1.0@dev",
-    "monkeyscloud/monkeyslegion-mail": "^1.0@dev",
-    "monkeyscloud/monkeyslegion-queue": "dev-main",
-    "monkeyscloud/monkeyslegion-template": "^1.0@dev",
-    "monkeyscloud/monkeyslegion-router": "^2.0@dev",
-    "monkeyscloud/monkeyslegion-cache": "^1.0@dev",
-    "monkeyscloud/monkeyslegion-core": "^1.0@dev",
-    "monkeyscloud/monkeyslegion-mlc": "^2.0@dev",
+    "psr/event-dispatcher": "^1.0",
+    "monkeyscloud/monkeyslegion-query": "^1.0",
+    "monkeyscloud/monkeyslegion-mail": "^2.0",
+    "monkeyscloud/monkeyslegion-queue": "^1.1",
+    "monkeyscloud/monkeyslegion-template": "^1.0",
+    "monkeyscloud/monkeyslegion-router": "^2.0",
+    "monkeyscloud/monkeyslegion-cache": "^1.0",
+    "monkeyscloud/monkeyslegion-core": "^1.0",
     "monkeyscloud/monkeyslegion-di": "^1.0",
-    "monkeyscloud/monkeyslegion-cli": "^1.0@dev"
+    "monkeyscloud/monkeyslegion-cli": "^1.0",
+    "monkeyscloud/monkeyslegion-events": "^1.0"
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse src --level=max",
+    "cs-fix": "php-cs-fixer fix src",
+    "ci": [
+      "@analyse",
+      "@test"
+    ]
   }
 }

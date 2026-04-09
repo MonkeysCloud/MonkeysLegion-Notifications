@@ -15,6 +15,7 @@ trait Notifiable
      */
     public function notify(NotificationInterface $notification): void
     {
+        /** @var NotificationManager $manager */
         $manager = $this->resolve(NotificationManager::class);
         $manager->send($this, $notification);
     }

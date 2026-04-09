@@ -4,8 +4,8 @@ namespace MonkeysLegion\Notifications\Attributes;
 
 use MonkeysLegion\Notifications\NotificationManager;
 use MonkeysLegion\Notifications\Contracts\NotifiableInterface;
+use MonkeysLegion\Notifications\Contracts\NotificationInterface;
 use ReflectionClass;
-use ReflectionProperty;
 use RuntimeException;
 
 class AttributeProcessor
@@ -15,26 +15,36 @@ class AttributeProcessor
     ) {
     }
 
-    /**
-     * Process attributes on a given object.
+   /**
+     * Process attributes on a given object, its properties, and its getters.
      */
     public function process(object $entity): void
     {
         $reflection = new ReflectionClass($entity);
 
-        // Check Class-level Attributes
-        $classAttributes = $reflection->getAttributes(Notify::class);
-        foreach ($classAttributes as $attribute) {
+        // 1. Check Class-level Attributes
+        foreach ($reflection->getAttributes(Notify::class) as $attribute) {
             $this->triggerNotification($entity, $attribute->newInstance());
         }
 
-        // Check Property-level Attributes
+        // 2. Check Property-level Attributes
         foreach ($reflection->getProperties() as $property) {
-            $propAttributes = $property->getAttributes(Notify::class);
-            foreach ($propAttributes as $attribute) {
-                // Only trigger if it's actually been initialized
-                if ($property->isInitialized($entity)) {
-                    $this->triggerNotification($entity, $attribute->newInstance(), $property);
+            if ($property->isInitialized($entity)) {
+                foreach ($property->getAttributes(Notify::class) as $attribute) {
+                    $this->triggerNotification($entity, $attribute->newInstance(), $property->getValue($entity));
+                }
+            }
+        }
+
+        // 3. Check Method-level Attributes (Getters)
+        foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            // Check if it's a getter (starts with get, is, or has) and has no required parameters
+            if (preg_match('/^(get|is|has)/', $method->getName()) && $method->getNumberOfRequiredParameters() === 0) {
+                $methodAttributes = $method->getAttributes(Notify::class);
+                foreach ($methodAttributes as $attribute) {
+                    // Invoke the getter to get the value for the notification
+                    $value = $method->invoke($entity);
+                    $this->triggerNotification($entity, $attribute->newInstance(), $value);
                 }
             }
         }
@@ -43,27 +53,28 @@ class AttributeProcessor
     /**
      * Trigger the notification based on attribute settings.
      */
-    protected function triggerNotification(object $entity, Notify $notify, ?ReflectionProperty $property = null): void
+    protected function triggerNotification(object $entity, Notify $notify, mixed $data = null): void
     {
-        // 1. Safety check: Can this entity receive notifications?
         if (!$entity instanceof NotifiableInterface) {
             return;
         }
 
-        // 2. Get the Notification class name from the Attribute
         $notificationClass = $notify->notification;
 
         if (!class_exists($notificationClass)) {
             throw new RuntimeException("Notification class [{$notificationClass}] not found.");
         }
 
-        // 3. Instantiate the Notification
-        // We pass the entity (and property value if it exists) to the constructor
-        $notification = $property 
-            ? new $notificationClass($property->getValue($entity))
+        // If data was provided (from a property or getter), pass that. 
+        // Otherwise, pass the whole entity (class-level).
+        $notification = ($data !== null) 
+            ? new $notificationClass($data)
             : new $notificationClass($entity);
 
-        // 4. Send it!
+        if (!$notification instanceof NotificationInterface) {
+            throw new RuntimeException("Notification class [{$notificationClass}] must implement NotificationInterface.");
+        }
+
         $this->manager->send($entity, $notification);
     }
 }

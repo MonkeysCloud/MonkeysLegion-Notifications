@@ -2,18 +2,22 @@
 
 namespace Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
-use MonkeysLegion\Notifications\NotificationManager;
+use MonkeysLegion\Notifications\Channels\ChannelInterface;
 use MonkeysLegion\Notifications\Contracts\NotifiableInterface;
 use MonkeysLegion\Notifications\Contracts\NotificationInterface;
-use MonkeysLegion\Notifications\Channels\ChannelInterface;
-use Psr\EventDispatcher\EventDispatcherInterface;
-use MonkeysLegion\Queue\Dispatcher\QueueDispatcher;
+use MonkeysLegion\Notifications\NotificationManager;
 use MonkeysLegion\Queue\Contracts\ShouldQueue;
+use MonkeysLegion\Queue\Dispatcher\QueueDispatcher;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
+#[CoversClass(NotificationManager::class)]
 class NotificationManagerTest extends TestCase
 {
-    public function test_it_can_send_a_notification_to_a_channel()
+    #[Test]
+    public function it_can_send_a_notification_to_a_channel()
     {
         $notifiable = $this->createStub(NotifiableInterface::class);
         $notification = $this->createStub(NotificationInterface::class);
@@ -31,7 +35,8 @@ class NotificationManagerTest extends TestCase
         $manager->send($notifiable, $notification);
     }
 
-    public function test_it_dispatches_events_after_sending()
+    #[Test]
+    public function it_dispatches_events_after_sending()
     {
         $notifiable = $this->createStub(NotifiableInterface::class);
         $notification = $this->createStub(NotificationInterface::class);
@@ -49,7 +54,8 @@ class NotificationManagerTest extends TestCase
         $manager->send($notifiable, $notification);
     }
 
-    public function test_it_queues_notifications_that_implement_should_queue()
+    #[Test]
+    public function it_queues_notifications_that_implement_should_queue()
     {
         $notifiable = $this->createStub(NotifiableInterface::class);
         $notification = $this->createStub(QueuedNotification::class);

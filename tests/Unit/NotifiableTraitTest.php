@@ -2,13 +2,17 @@
 
 namespace Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
-use MonkeysLegion\Notifications\Traits\Notifiable;
 use MonkeysLegion\Notifications\Contracts\NotificationInterface;
+use MonkeysLegion\Notifications\Traits\Notifiable;
+use PHPUnit\Framework\Attributes\CoversTrait;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
+#[CoversTrait(Notifiable::class)]
 class NotifiableTraitTest extends TestCase
 {
-    public function test_it_can_route_notification_for_mail()
+    #[Test]
+    public function it_can_route_notification_for_mail()
     {
         $user = new class {
             use Notifiable;
@@ -18,7 +22,8 @@ class NotifiableTraitTest extends TestCase
         $this->assertEquals('test@example.com', $user->routeNotificationFor('mail'));
     }
 
-    public function test_it_can_use_custom_routing_method()
+    #[Test]
+    public function it_can_use_custom_routing_method()
     {
         $user = new class {
             use Notifiable;
@@ -31,7 +36,8 @@ class NotifiableTraitTest extends TestCase
         $this->assertEquals('custom@example.com', $user->routeNotificationFor('mail'));
     }
 
-    public function test_it_handles_database_routing_by_id()
+    #[Test]
+    public function it_handles_database_routing_by_id()
     {
         $user = new class {
             use Notifiable;

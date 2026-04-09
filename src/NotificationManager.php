@@ -17,9 +17,11 @@ class NotificationManager
 {
     /**
      * Store the factory functions here
+     *
+     * @var array<string, callable(): ChannelInterface>
      */
     protected array $customCreators = [];
-    
+
     /**
      * The array of registered channels.
      *
@@ -30,16 +32,16 @@ class NotificationManager
     public function __construct(
         protected ?EventDispatcherInterface $events = null,
         protected ?QueueDispatcher $queue = null
-    ) {
-    }
+    ) {}
 
     /**
      * Send the given notification to the given notifiable.
+     *
+     * @param NotifiableInterface|array<int, NotifiableInterface> $notifiables
      */
     public function send(NotifiableInterface|array $notifiables, NotificationInterface $notification): void
     {
         $notifiables = is_array($notifiables) ? $notifiables : [$notifiables];
-
         foreach ($notifiables as $notifiable) {
             $channels = $notification->via($notifiable);
 
@@ -61,6 +63,8 @@ class NotificationManager
 
     /**
      * Send the notification immediately.
+     *
+     * @param NotifiableInterface|array<int, NotifiableInterface> $notifiables
      */
     public function sendNow(NotifiableInterface|array $notifiables, NotificationInterface $notification): void
     {
@@ -82,19 +86,19 @@ class NotificationManager
     {
         try {
             // 1. Try to get it from the local cache
-    $channel = $this->channels[$channelName] ?? null;
+            $channel = $this->channels[$channelName] ?? null;
 
-    // 2. If not cached, resolve it from the Framework Container
-    if (!$channel) {
-        $channel = $this->resolveChannel($channelName);
-    }
-            $response = $channel->send($notifiable, $notification);
+            // 2. If not cached, resolve it from the Framework Container
+            if (!$channel) {
+                $channel = $this->resolveChannel($channelName);
+            }
+            $channel->send($notifiable, $notification);
 
             $this->events?->dispatch(new NotificationSent(
                 $notifiable,
                 $notification,
                 $channelName,
-                $response
+                null
             ));
         } catch (Throwable $e) {
             $this->events?->dispatch(new NotificationFailed(
@@ -113,6 +117,10 @@ class NotificationManager
      */
     protected function queue(NotifiableInterface $notifiable, NotificationInterface $notification): void
     {
+        if ($this->queue === null) {
+            return;
+        }
+
         $this->queue->dispatch(new SendNotificationJob($notifiable, $notification));
     }
 
@@ -122,9 +130,9 @@ class NotificationManager
     protected function resolveChannel(string $channelName): ChannelInterface
     {
         // 1. Check if we have a creator for this channel (e.g., 'mail')
-        if (isset($this->customCreators[$channelName])) {
-            $channel = $this->customCreators[$channelName]();
-            
+        if (array_key_exists($channelName, $this->customCreators)) {
+            $channel = ($this->customCreators[$channelName])();
+
             // Cache it so we don't recreate it for the next notification
             return $this->channels[$channelName] = $channel;
         }

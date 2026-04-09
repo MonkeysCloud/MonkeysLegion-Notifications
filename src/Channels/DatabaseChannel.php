@@ -22,10 +22,12 @@ class DatabaseChannel implements ChannelInterface
      */
     public function send(NotifiableInterface $notifiable, NotificationInterface $notification): void
     {
+        $notifiableId = $notifiable->routeNotificationFor('database');
+
         $this->query->insert($this->table, [
             'id' => $this->generateUuid(),
             'notifiable_type' => get_class($notifiable),
-            'notifiable_id' => (string) $notifiable->routeNotificationFor('database'),
+            'notifiable_id' => is_scalar($notifiableId) ? (string) $notifiableId : '',
             'data' => json_encode($this->getData($notifiable, $notification)),
             'read_at' => null,
             'created_at' => date('Y-m-d H:i:s'),
@@ -40,11 +42,9 @@ class DatabaseChannel implements ChannelInterface
      */
     protected function getData(NotifiableInterface $notifiable, NotificationInterface $notification): array
     {
-        if (method_exists($notification, 'toDatabase')) {
-            return $notification->toDatabase($notifiable);
-        }
-
-        return $notification->toArray($notifiable);
+        /** @var array<string, mixed> $data */
+        $data = $notification->toDatabase($notifiable);
+        return $data;
     }
 
     /**

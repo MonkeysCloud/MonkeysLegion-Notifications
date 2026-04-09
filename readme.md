@@ -94,8 +94,21 @@ class Account
 }
 ```
 
-The `AttributeProcessor` scans for these triggers during event lifespan.
+The `AttributeProcessor` scans for these triggers during event lifespan. For more detailed examples and advanced usage (including private getters and global listener mapping), check the [Notification Listener Usage Guide](notification_listener_usage.md).
 
+## 🔌 Custom Channels (Open Channels)
+
+MonkeysLegion Notifications is an **open channels package**. This means you can easily extend it by adding your own delivery channels (e.g., Slack, SMS, Push).
+
+To register a custom channel, use the `extend` method on the `NotificationManager`:
+
+```php
+$notificationManager->extend('my-channel', function () {
+    return new MyCustomChannel(/* dependencies */);
+});
+```
+
+The callable must return an instance that implements the `MonkeysLegion\Notifications\Channels\ChannelInterface`.
 
 ## 📦 Project Structure
 
@@ -128,7 +141,8 @@ monkeyslegion-notifications/
 ├── database/
 │   └── migrations/                 # Default sql migrations for DB channel
 ├── config/
-│   └── notifications.mlc           # MonkeysLegion Config format
+│   ├── notifications.mlc           # MonkeysLegion Config format
+│   └── notifications.php           # PHP array config using $_ENV
 ```
 
 ## 📡 Scope & Integration
@@ -136,34 +150,13 @@ monkeyslegion-notifications/
 This package is designed as a **Producer**. It formats messages and submits them to the respective underlying systems:
 
 - **Queue**: If a notification implements `ShouldQueue`, it is wrapped in a `SendNotificationJob` and handed to `MonkeysLegion-Queue`.
+    - > [!NOTE] Implement the `ShouldSync` interface to force immediate execution. For full details on the queue system, visit the [MonkeysLegion Queue Documentation](https://monkeyslegion.com/docs/packages/queue).
 - **Database**: Records are persisted using `MonkeysLegion-Query`.
 - **Mail**: Content is handed over to `MonkeysLegion-Mail`.
 
-## 🚦 Roadmap
+## 🚦 TODO
 
-### Phase 1: Core Foundation (Complete)
-- [x] Basic Contracts & Interfaces
-- [x] Database Channel implementation
-- [x] Queue Integration via `ShouldQueue`
-- [x] `Notifiable` Trait & `NotificationManager`
-
-### Phase 2: Built-in Channels (Complete)
-- [x] Mail Channel Integration (using MonkeysLegion-Mail)
-- [x] `MailMessage` fluent builder
-
-### Phase 3: Advanced Integration (In Progress)
-- [x] PSR-14 Event Listeners
-- [x] `#[Notify]` attribute processor
-- [ ] Notification History UI components (Skeleton integration)
+- [ ] Slack & SMS & Push Notifications integration
 
 ---
 Made with ❤️ by MonkeysLegion
-
-
-
-
-Component,Purpose,Status
-Notification Discovery,Scan for #[Notify] attributes on DTOs.,In Progress
-Polymorphic Storage,Migration for a notifications table that works with any Entity ID.,Needed
-"The ""Anonymous"" Notifiable",For routing notifications to raw emails/phone numbers.,Needed
-Templating Engine,Integration with your framework's View engine for HTML emails.,Needed

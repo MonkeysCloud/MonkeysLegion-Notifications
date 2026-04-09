@@ -20,6 +20,8 @@ interface NotificationInterface
 
     /**
      * Get the database representation of the notification.
+     *
+     * @return array<string, mixed>
      */
     public function toDatabase(NotifiableInterface $notifiable): array;
 

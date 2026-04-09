@@ -3,6 +3,7 @@
 namespace MonkeysLegion\Notifications\Jobs;
 
 use MonkeysLegion\DI\Traits\ContainerAware;
+use MonkeysLegion\Logger\Contracts\MonkeysLoggerInterface;
 use MonkeysLegion\Notifications\Contracts\NotifiableInterface;
 use MonkeysLegion\Notifications\Contracts\NotificationInterface;
 use MonkeysLegion\Notifications\NotificationManager;
@@ -12,6 +13,7 @@ use MonkeysLegion\Queue\Contracts\DispatchableJobInterface;
 class SendNotificationJob implements ShouldQueue, DispatchableJobInterface
 {
     use ContainerAware;
+
     /**
      * Create a new job instance.
      */
@@ -26,7 +28,14 @@ class SendNotificationJob implements ShouldQueue, DispatchableJobInterface
      */
     public function handle(): void
     {
-        $manager = $this->resolve(NotificationManager::class);
-        $manager->sendNow($this->notifiable, $this->notification);
+        try {
+            /** @var NotificationManager $manager */
+            $manager = $this->resolve(NotificationManager::class);
+            $manager->sendNow($this->notifiable, $this->notification);
+        } catch (\Throwable $e) {
+            /** @var MonkeysLoggerInterface $logger */
+            $logger = $this->resolve(MonkeysLoggerInterface::class);
+            $logger->warning('Failed to dispatch SendNotificationJob', ['exception' => $e]);
+        }
     }
 }
