@@ -2,6 +2,12 @@
 
 namespace Tests\Unit;
 
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+    fwrite(STDERR, "\n\n!!! FOUND IT !!!\n$errstr in $errfile on line $errline\n\n");
+    return false; // Let PHPUnit continue its own handling
+});
+
+
 use MonkeysLegion\Events\ListenerProvider;
 use MonkeysLegion\Mail\Mailer;
 use MonkeysLegion\Notifications\Attributes\AttributeProcessor;
@@ -12,9 +18,12 @@ use MonkeysLegion\Notifications\Events\NotificationFailed;
 use MonkeysLegion\Notifications\Jobs\SendNotificationJob;
 use MonkeysLegion\Notifications\NotificationListener;
 use MonkeysLegion\Notifications\NotificationManager;
-use MonkeysLegion\Notifications\NotificationServiceProvider;
 use MonkeysLegion\Query\QueryBuilder;
 use MonkeysLegion\Database\SQLite\Connection as SqliteConnection;
+use MonkeysLegion\DI\Container;
+use MonkeysLegion\Mlc\Config;
+use MonkeysLegion\Notifications\Providers\NotificationServiceProvider;
+use MonkeysLegion\Queue\Dispatcher\QueueDispatcher;
 use MonkeysLegion\Template\Contracts\CompilerInterface;
 use MonkeysLegion\Template\Contracts\LoaderInterface;
 use MonkeysLegion\Template\Contracts\ParserInterface;
@@ -32,14 +41,30 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 #[CoversTrait(\MonkeysLegion\Notifications\Traits\Notifiable::class)]
 final class NotificationManagerAndProviderCoverageTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        NotificationServiceProvider::$manager = null;
+        NotificationServiceProvider::$processor = null;
+        NotificationServiceProvider::$listenerProvider = null;
+        NotificationServiceProvider::$listener = null;
+    }
+
     #[Test]
     public function manager_send_now_and_array_notifiables_use_channel(): void
     {
         $notifiableA = new class implements NotifiableInterface {
-            public function routeNotificationFor(string $channel): mixed { return null; }
+            public function routeNotificationFor(string $channel): mixed
+            {
+                return null;
+            }
         };
         $notifiableB = new class implements NotifiableInterface {
-            public function routeNotificationFor(string $channel): mixed { return null; }
+            public function routeNotificationFor(string $channel): mixed
+            {
+                return null;
+            }
         };
         $notification = $this->createStub(NotificationInterface::class);
         $notification->method('via')->willReturn(['alpha']);
@@ -56,7 +81,10 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
     public function manager_skips_empty_channels_and_dispatches_failed_event_then_rethrows(): void
     {
         $notifiable = new class implements NotifiableInterface {
-            public function routeNotificationFor(string $channel): mixed { return null; }
+            public function routeNotificationFor(string $channel): mixed
+            {
+                return null;
+            }
         };
         $notification = $this->createStub(NotificationInterface::class);
         $notification->method('via')->willReturn(['broken']);
@@ -73,7 +101,7 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
         $manager->extend('broken', fn() => $channel);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('fail');
+        $this->expectExceptionMessageIsOrContains('fail');
         $manager->send($notifiable, $notification);
     }
 
@@ -81,7 +109,10 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
     public function manager_throws_for_unsupported_driver(): void
     {
         $notifiable = new class implements NotifiableInterface {
-            public function routeNotificationFor(string $channel): mixed { return null; }
+            public function routeNotificationFor(string $channel): mixed
+            {
+                return null;
+            }
         };
         $notification = $this->createStub(NotificationInterface::class);
         $notification->method('via')->willReturn(['missing']);
@@ -89,7 +120,7 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
         $manager = new NotificationManager();
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Driver [missing] not supported.');
+        $this->expectExceptionMessageIsOrContains('Driver [missing] not supported.');
         $manager->send($notifiable, $notification);
     }
 
@@ -105,7 +136,10 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
         \MonkeysLegion\DI\Container::setInstance($container);
 
         $notifiable = new class implements NotifiableInterface {
-            public function routeNotificationFor(string $channel): mixed { return null; }
+            public function routeNotificationFor(string $channel): mixed
+            {
+                return null;
+            }
         };
         $notification = $this->createStub(NotificationInterface::class);
         $job = new SendNotificationJob($notifiable, $notification);
@@ -177,13 +211,15 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
     #[Test]
     public function service_provider_registers_extensions_with_default_and_custom_table(): void
     {
-        $manager = new NotificationManager(null, $this->createStub(\MonkeysLegion\Queue\Dispatcher\QueueDispatcher::class));
+        Container::setInstance(new Container());
+        $queue = $this->createStub(QueueDispatcher::class);
         $provider = new NotificationServiceProvider();
 
         $mailer = $this->getMockBuilder(Mailer::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['send'])
             ->getMock();
+        $events = $this->createStub(EventDispatcherInterface::class);
 
         $parser = $this->createStub(ParserInterface::class);
         $parser->method('parse')->willReturnCallback(fn(string $source): string => $source);
@@ -214,7 +250,13 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
         );
         $query = new QueryBuilder($conn);
 
-        $provider->register($manager, $mailer, $renderer, $query, ['table' => 'notifications']);
+        $config = new Config(['table' => 'notifications']);
+        $provider->register($mailer, $renderer, $query, $events, $queue,  $config);
+        $manager = NotificationServiceProvider::getManager();
+        $this->assertInstanceOf(NotificationManager::class, $manager);
+        $this->assertInstanceOf(AttributeProcessor::class, $provider->getAttributeProcessor());
+        $this->assertInstanceOf(ListenerProvider::class, $provider->getListenerProvider());
+        $this->assertInstanceOf(NotificationListener::class, $provider->getListener());
 
         $notifiable = new class implements NotifiableInterface {
             public function routeNotificationFor(string $channel): mixed
@@ -224,9 +266,18 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
         };
 
         $mailNotification = new class implements NotificationInterface {
-            public function via(NotifiableInterface $notifiable): array { return ['mail']; }
-            public function toArray(NotifiableInterface $notifiable): array { return []; }
-            public function toDatabase(NotifiableInterface $notifiable): array { return []; }
+            public function via(NotifiableInterface $notifiable): array
+            {
+                return ['mail'];
+            }
+            public function toArray(NotifiableInterface $notifiable): array
+            {
+                return [];
+            }
+            public function toDatabase(NotifiableInterface $notifiable): array
+            {
+                return [];
+            }
             public function toMail(NotifiableInterface $notifiable): mixed
             {
                 return (new \MonkeysLegion\Notifications\Messages\MailMessage())
@@ -238,16 +289,69 @@ final class NotificationManagerAndProviderCoverageTest extends TestCase
         $manager->send($notifiable, $mailNotification);
 
         $databaseNotification = new class implements NotificationInterface {
-            public function via(NotifiableInterface $notifiable): array { return ['database']; }
-            public function toArray(NotifiableInterface $notifiable): array { return ['x' => 1]; }
-            public function toDatabase(NotifiableInterface $notifiable): array { return ['x' => 1]; }
-            public function toMail(NotifiableInterface $notifiable): mixed { return null; }
+            public function via(NotifiableInterface $notifiable): array
+            {
+                return ['database'];
+            }
+            public function toArray(NotifiableInterface $notifiable): array
+            {
+                return ['x' => 1];
+            }
+            public function toDatabase(NotifiableInterface $notifiable): array
+            {
+                return ['x' => 1];
+            }
+            public function toMail(NotifiableInterface $notifiable): mixed
+            {
+                return null;
+            }
         };
         $manager->send($notifiable, $databaseNotification);
 
         $count = (int) $conn->pdo()->query('SELECT COUNT(*) FROM notifications')->fetchColumn();
         $this->assertGreaterThanOrEqual(1, $count);
     }
+
+    #[Test]
+    public function service_provider_throws_when_manager_not_registred(): void {
+        Container::setInstance(new Container());
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageIsOrContains('NotificationManager not registered yet.');
+        NotificationServiceProvider::getManager();
+    }
+
+    #[Test]
+    public function service_provider_throws_when_attribute_processor_not_registred(): void {
+        Container::setInstance(new Container());
+        $provider = new NotificationServiceProvider();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageIsOrContains('AttributeProcessor not registered yet.');
+        $provider->getAttributeProcessor();
+    }
+
+    #[Test]
+    public function service_provider_throws_when_listener_provider_not_registred(): void {
+        Container::setInstance(new Container());
+        $provider = new NotificationServiceProvider();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageIsOrContains('ListenerProvider not registered yet.');
+        $provider->getListenerProvider();
+    }
+
+    #[Test]
+    public function service_provider_throws_when_listener_not_registred(): void {
+        Container::setInstance(new Container());
+        $provider = new NotificationServiceProvider();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageIsOrContains('NotificationListener not registered yet.');
+        $provider->getListener();
+    }
+
+    
 
     private function ensureTempBasePath(): string
     {

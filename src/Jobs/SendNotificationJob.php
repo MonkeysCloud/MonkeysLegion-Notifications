@@ -35,7 +35,11 @@ class SendNotificationJob implements ShouldQueue, DispatchableJobInterface
         } catch (\Throwable $e) {
             /** @var MonkeysLoggerInterface $logger */
             $logger = $this->resolve(MonkeysLoggerInterface::class);
-            $logger->warning('Failed to dispatch SendNotificationJob', ['exception' => $e]);
+            $logger->warning('Failed to dispatch SendNotificationJob', [
+                'notifiable' => $this->notifiable,
+                'notification' => $this->notification,
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 }

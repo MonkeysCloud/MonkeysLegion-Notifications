@@ -11,7 +11,6 @@
   "require-dev": {
     "phpunit/phpunit": "^13.1@dev",
     "phpstan/phpstan": "2.2.x-dev",
-    "monkeyscloud/monkeyslegion-mlc": "^3.1",
     "friendsofphp/php-cs-fixer": "^3.94"
   },
   "require": {
@@ -20,12 +19,18 @@
     "monkeyscloud/monkeyslegion-mail": "^2.0",
     "monkeyscloud/monkeyslegion-queue": "^1.1",
     "monkeyscloud/monkeyslegion-template": "^1.0",
-    "monkeyscloud/monkeyslegion-router": "^2.0",
-    "monkeyscloud/monkeyslegion-cache": "^1.0",
     "monkeyscloud/monkeyslegion-core": "^1.0",
     "monkeyscloud/monkeyslegion-di": "^1.0",
     "monkeyscloud/monkeyslegion-cli": "^1.0",
-    "monkeyscloud/monkeyslegion-events": "^1.0"
+    "monkeyscloud/monkeyslegion-events": "^1.0",
+    "monkeyscloud/monkeyslegion-mlc": "^3.1"
+  },
+  "extra": {
+    "monkeyslegion": {
+      "providers": [
+        "MonkeysLegion\\Notifications\\Providers\\NotificationServiceProvider"
+      ]
+    }
   },
   "scripts": {
     "test": "phpunit",

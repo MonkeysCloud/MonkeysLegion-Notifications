@@ -20,6 +20,61 @@ MonkeysLegion Notifications allows you to send messages across various delivery 
 composer require monkeyscloud/monkeyslegion-notifications
 ```
 
+## ⚙️ Setup
+
+You can bootstrap notifications in two ways depending on how much automation you want.
+
+### 1. Manual setup (full control)
+
+Configure and wire all components yourself.
+
+```php
+use MonkeysLegion\Events\ListenerProvider;
+use MonkeysLegion\Notifications\Attributes\AttributeProcessor;
+use MonkeysLegion\Notifications\Channels\DatabaseChannel;
+use MonkeysLegion\Notifications\Channels\MailChannel;
+use MonkeysLegion\Notifications\NotificationListener;
+use MonkeysLegion\Notifications\NotificationManager;
+
+$manager = new NotificationManager(
+    events: $eventDispatcher, // optional
+    queue: $queueDispatcher   // optional
+);
+
+$manager->extend('mail', fn () => new MailChannel($mailer, $renderer));
+$manager->extend('database', fn () => new DatabaseChannel($queryBuilder, 'notifications'));
+
+$processor = new AttributeProcessor($manager);
+$listenerProvider = new ListenerProvider();
+$listener = new NotificationListener(
+    manager: $manager,
+    processor: $processor,
+    dispatcher: $listenerProvider
+);
+```
+
+Use this approach when you want explicit, per-service control over construction and registration.
+
+### 2. Near-auto setup (ServiceProvider + MonkeysLegion-DI)
+
+Use the package `NotificationServiceProvider` with the container from `monkeyscloud/monkeyslegion-di`.
+The provider wires `NotificationManager`, channels, `AttributeProcessor`, and `NotificationListener` for you.
+
+This package also exposes provider discovery metadata in `composer.json`:
+
+```json
+"extra": {
+  "monkeyslegion": {
+    "providers": [
+      "MonkeysLegion\\Notifications\\Providers\\NotificationServiceProvider"
+    ]
+  }
+}
+```
+
+So if your bootstrap supports MonkeysLegion provider discovery, this provider can be auto-registered.
+This is the same convention used by MonkeysLegion packages that expose service providers.
+
 ## 📖 Basic Usage
 
 ### 1. Define a Notification
