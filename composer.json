@@ -19,7 +19,7 @@
         "monkeyscloud/monkeyslegion-di": "^2.0",
         "monkeyscloud/monkeyslegion-events": "^2.0",
         "monkeyscloud/monkeyslegion-mail": "^2.0",
-        "monkeyscloud/monkeyslegion-mlc": "^2.0",
+        "monkeyscloud/monkeyslegion-mlc": "^3.2",
         "monkeyscloud/monkeyslegion-query": "^2.1",
         "monkeyscloud/monkeyslegion-queue": "^2.0",
         "monkeyscloud/monkeyslegion-template": "^2.0",
