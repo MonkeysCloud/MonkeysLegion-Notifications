@@ -140,16 +140,18 @@ final class PublishCommand extends Command
      * @param string $path
      * @return void
      */
-    private function ensureDirectoryExists(string $path): void
+    protected function ensureDirectoryExists(string $path, int $mode = 0755, bool $recursive = true): bool
     {
         $fullPath = str_starts_with($path, '/') ? $path : \base_path($path);
 
         if (!is_dir($fullPath)) {
-            mkdir($fullPath, 0755, true);
+            mkdir($fullPath, $mode, $recursive);
             $this->cliLine()
                 ->muted("Created directory: ")
                 ->add($fullPath, 'yellow')
                 ->print();
         }
+
+        return true;
     }
 }
